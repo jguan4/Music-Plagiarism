@@ -46,7 +46,7 @@ for url in songURLs:
     origSong.name=names[0]+" ["+names[1]+"]"
     #origSong.artist=names[1]                #uncomment for seperate field for artist names
     origSong.sampledList=[]
-    sleep(1)
+    sleep(2)
     
     #go to "see all" page of sampling songs and get name and artist of each song on first page of list (15 songs)
                                     #sampledURLs=["https://www.whosampled.com"+x.a['href']+'sampled/' for x in wsSoup.find_all('span', {'class':"trackInfo"})]
@@ -70,7 +70,7 @@ for url in songURLs:
         sampledSong.origSampleStart=sampledSongSoup.find("strong",{'id':"sample-source-timing"}).text.strip().replace(","," ").replace("and"," ").split()
         
         origSong.sampledList.append(sampledSong)    #add info of sampling song to list attached to orginal song
-        sleep(1)
+        sleep(2)
          
 #get name and artist of covering songs
         # origSong.coverList
