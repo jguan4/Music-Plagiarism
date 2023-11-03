@@ -26,7 +26,7 @@ songURLs=[]
 wsSoup.find('span', {'class':"trackInfo"}).a["href"]
 songURLs.extend([x.a['href'] for x in wsSoup.find_all('span', {'class':"trackInfo"})])
 
-for x in range(2,10):   #loops to different pages of the list of "Most Sampled Tracks" with 10 tracks per page, change the range to increase/decrease the number of original songs scraped
+for x in range(2,5):   #loops to different pages of the list of "Most Sampled Tracks" with 10 tracks per page, change the range to increase/decrease the number of original songs scraped
     html=scraper.get("https://www.whosampled.com/most-sampled-tracks/"+str(x)+"/")
     wsSoup=BeautifulSoup(html.text,'html.parser')
     wsSoup.find('span', {'class':"trackInfo"}).a["href"]
@@ -70,7 +70,7 @@ for url in songURLs:
         sampledSong.origSampleStart=sampledSongSoup.find("strong",{'id':"sample-source-timing"}).text.strip().replace(","," ").replace("and"," ").split()
         
         origSong.sampledList.append(sampledSong)    #add info of sampling song to list attached to orginal song
-        sleep(.5)
+        sleep(1)
          
 #get name and artist of covering songs
         # origSong.coverList
