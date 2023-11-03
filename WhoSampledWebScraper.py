@@ -40,7 +40,6 @@ for url in songURLs:
     #get name and artist of each song + go to the page for that song
     songHtml=scraper.get("https://www.whosampled.com"+url)          #wsSoup.find('span', {'class':"trackInfo"}).a["href"])
     songSoup=BeautifulSoup(songHtml.text,'html.parser')
-    print(songSoup.find("meta content",{'itemprop':"name"}))
     names=songSoup.h1.text.strip().split('\n\nby')
     origSong=song()
     origSong.name=names[0]+" ["+names[1]+"]"
