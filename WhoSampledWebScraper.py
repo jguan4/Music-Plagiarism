@@ -31,6 +31,7 @@ for x in range(2,5):   #loops to different pages of the list of "Most Sampled Tr
     wsSoup=BeautifulSoup(html.text,'html.parser')
     wsSoup.find('span', {'class':"trackInfo"}).a["href"]
     songURLs.extend([x.a['href'] for x in wsSoup.find_all('span', {'class':"trackInfo"})])
+    sleep(2)
     
     
     
