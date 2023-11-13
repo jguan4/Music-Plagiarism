@@ -143,7 +143,7 @@ class Xception(nn.Module):
         self.conv4 = SeparableConv2d(1536,2048,3,1,1)
         self.bn4 = nn.BatchNorm2d(2048)
 
-        # self.fc = nn.Linear(2048, num_classes)
+        self.fc = nn.Linear(2048, num_classes)
 
 
 
@@ -193,7 +193,7 @@ class Xception(nn.Module):
 
         x = F.adaptive_avg_pool2d(x, (1, 1))
         x = x.view(x.size(0), -1)
-        # x = self.fc(x)
+        x = self.fc(x)
 
         return x
 
@@ -208,7 +208,7 @@ class Xception(nn.Module):
 
 
 
-def xception(pretrained=True, to_cuda = False,**kwargs):
+def xception(pretrained=True, to_cuda = False, reload_previous = False, **kwargs):
     """
     Construct Xception.
     """
@@ -217,5 +217,14 @@ def xception(pretrained=True, to_cuda = False,**kwargs):
     else:
         model = Xception(**kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['xception']))
+        model.load_state_dict(torch.load('xception-43020ad28.pth'))
+        # model.load_state_dict(model_zoo.load_url(model_urls['xception']))
+    if reload_previous:
+        load_model(model)
     return model
+
+def save_model(model, path = './xception.pth'):
+    torch.save(model.state_dict(), path)
+
+def load_model(model, path = './xception.pth'):
+    model.load_state_dict(torch.load(path))
