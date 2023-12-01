@@ -2,7 +2,9 @@ import librosa
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import torch
 import pandas as pd
+import torch.nn.functional as F
 
 
 # ------------ string related
@@ -10,7 +12,7 @@ def convert_time_to_sec(time_str):
     # convert time string like ['1:27'] to seconds
     if "," in time_str:
         return [convert_time_to_sec(i) for i in time_str.split(",")]
-                
+
     # if "[" in time_str:
     time_str = time_str.replace("[", "")
     time_str = time_str.replace("]", "")
@@ -55,7 +57,6 @@ def calculate_eightbars_duration(audio, sr):
 	# assuming a 44 time signature
 	secs = 60/bpm*4*8
 	return secs
-
 # --------------------------------------
 
 # ---------------------for dataset conversion
@@ -67,6 +68,63 @@ def find_closest_number(array, target):
   distances = [np.abs(target - number) for number in array]
   # Return the index of the number with the minimum distance.
   return distances.index(min(distances))
+
+def save_mel_spectrogram(audio_clip, file_path):
+    # Produce the mel-spectrogram
+    S = librosa.feature.melspectrogram(y=audio_clip, sr=SAMPLE_RATE)
+    S_DB = librosa.power_to_db(S, ref=np.max)
+
+    # Save the mel-spectrogram
+    plt.figure(figsize=(10, 10))
+    librosa.display.specshow(S_DB, sr=SAMPLE_RATE)
+    plt.tight_layout()
+    plt.savefig(file_path, bbox_inches='tight', pad_inches = 0, transparent = True)
+    plt.close()
+
+def save_chroma_feature(audio_clip, file_path):
+     # Produce the chroma feature
+    S = np.abs(librosa.stft(audio_clip, n_fft=4096))**2
+    S = librosa.feature.chroma_stft(y=audio_clip, sr=SAMPLE_RATE)
+    chroma = librosa.amplitude_to_db(S, ref=np.max)
+
+    # Save the chroma feature
+    plt.figure(figsize=(10, 10))
+    librosa.display.specshow(chroma, sr=SAMPLE_RATE)
+    plt.tight_layout()
+    plt.savefig(file_path, bbox_inches='tight', pad_inches = 0, transparent = True)
+    plt.close()
+
+def get_mel_spectrogram(audio_clip):
+    S = librosa.feature.melspectrogram(y=audio_clip, sr=SAMPLE_RATE)
+    S_DB = librosa.power_to_db(S, ref=np.max)
+
+    plt.figure(figsize=(10, 10))
+    librosa.display.specshow(S_DB, sr=SAMPLE_RATE)
+    plt.tight_layout()
+    tempname = "/content/drive/MyDrive/Music_Plagiarism/temp_{0}.png".format(time.time())
+    plt.savefig(tempname, bbox_inches='tight', pad_inches = 0, transparent = True)
+    img = Image.open(tempname)
+    img = img.convert("RGB")
+    os.remove(tempname)
+    plt.close()
+    return img
+
+def get_chroma_feature(audio_clip):
+    S = np.abs(librosa.stft(audio_clip, n_fft=4096))**2
+    S = librosa.feature.chroma_stft(y=audio_clip, sr=SAMPLE_RATE)
+    chroma = librosa.amplitude_to_db(S, ref=np.max)
+
+    plt.figure(figsize=(10, 10))
+    librosa.display.specshow(chroma, sr=SAMPLE_RATE)
+    plt.tight_layout()
+    tempname = "./temp_{0}.png".format(time.time())
+    plt.savefig(tempname, bbox_inches='tight', pad_inches = 0, transparent = True)
+    img = Image.open(tempname)
+    img = img.convert("RGB")
+    img.show()
+    os.remove(tempname)
+    plt.close()
+    return img
 #--------------------------------------------
 
 # ------------------------ for images
@@ -77,20 +135,21 @@ def imshow(img, text=None):
 	if text:
 		plt.text(75, 8, text, style='italic',fontweight='bold',
 			bbox={'facecolor':'white', 'alpha':0.8, 'pad':10})
-		
+
 	plt.imshow(np.transpose(npimg, (1, 2, 0)))
-	plt.show()    
+	plt.show()
 
 # Plotting data
 def show_plot(iteration,loss):
 	plt.plot(iteration,loss)
 	plt.show()
+
 #-------------------------------------------
 
 # -------------- similarity score functions
 def cos_sim_score(output1, output2):
 	score = F.cosine_similarity(output1,output2, dim = 1)
-	return score 
+	return score
 
 def pearson_corr_score(output1, output2):
 	xmean = torch.mean(output1)
@@ -99,22 +158,22 @@ def pearson_corr_score(output1, output2):
 	return p_score
 
 def weighted_score(output1,output2):
-	w_score = 0.2*F.pairwise_distance(output1, output2, keepdim = True)**2+0.4*cos_sim_score(output1, output2)+0.4*pearson_corr_score(output1,output2)
-	return w_score
-#------------------------------------------
+	edist = torch.dist(output1, output2)**2
+	cos_sim = cos_sim_score(output1, output2)
+	p_corr = pearson_corr_score(output1, output2)
+	w_score = 0.2*edist+0.4*cos_sim+0.4*p_corr
+	return [w_score, edist, cos_sim, p_corr]
 
+def num_segment(duration, seg):
+	interval = seg/2
+	num = np.ceil((duration-seg)/interval)
+	return num
 
-
-# from pydub import AudioSegment 
-# def load_mp3(audio_path):
-# 	song = AudioSegment.from_file(audio_path, format="mp3")
-# 	return song
-
-# def trim_mp3(mp3_audio, start_time, duration_sec=10):
-# 	song = AudioSegment.from_mp3(mp3_audio) 
-
-# 	# pydub does things in milliseconds 
-# 	seconds = duration_sec * 1000
-# 	cut_song = song[start_time*1000:seconds] 
-
-# 	return  cut_song
+def seg_interval(ind, duration, seg):
+	interval = seg/2
+	start_time = ind*interval
+	end_time = start_time+seg
+	if end_time>duration:
+		end_time = duration
+	return start_time, end_time
+# ---------------------------------------

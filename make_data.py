@@ -6,6 +6,9 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from utils import *
+import shutil
+import time
+
 
 # Configuration
 DIAGRAM = 'chroma' # choose between 'mel' (for spectrogram) and 'chroma' (for chroma feature)
@@ -31,8 +34,6 @@ def save_mel_spectrogram(audio_clip, file_path):
     # Save the mel-spectrogram
     plt.figure(figsize=(10, 10))
     librosa.display.specshow(S_DB, sr=SAMPLE_RATE)
-    # plt.colorbar(format='%+2.0f dB')
-    # plt.title('Mel-Spectrogram')
     plt.tight_layout()
     plt.savefig(file_path, bbox_inches='tight', pad_inches = 0, transparent = True)
     plt.close()
@@ -47,12 +48,40 @@ def save_chroma_feature(audio_clip, file_path):
     # Save the mel-spectrogram
     plt.figure(figsize=(10, 10))
     librosa.display.specshow(chroma, sr=SAMPLE_RATE)
-    # plt.colorbar(format='%+2.0f dB')
-    # plt.title('Mel-Spectrogram')
     plt.tight_layout()
     plt.savefig(file_path, bbox_inches='tight', pad_inches = 0, transparent = True)
     plt.close()
 
+def get_mel_spectrogram(audio_clip):
+    S = librosa.feature.melspectrogram(y=audio_clip, sr=SAMPLE_RATE)
+    S_DB = librosa.power_to_db(S, ref=np.max)
+
+    plt.figure(figsize=(10, 10))
+    librosa.display.specshow(S_DB, sr=SAMPLE_RATE)
+    plt.tight_layout()
+    tempname = "./temp_{0}.png".format(time.time())
+    plt.savefig(tempname, bbox_inches='tight', pad_inches = 0, transparent = True)
+    img = Image.open(tempname)
+    img = img.convert("RGB")
+    os.remove(tempname)
+    plt.close()
+    return img
+
+def get_chroma_feature(audio_clip):
+    S = np.abs(librosa.stft(audio_clip, n_fft=4096))**2
+    S = librosa.feature.chroma_stft(y=audio_clip, sr=SAMPLE_RATE)
+    chroma = librosa.amplitude_to_db(S, ref=np.max)
+
+    plt.figure(figsize=(10, 10))
+    librosa.display.specshow(chroma, sr=SAMPLE_RATE)
+    plt.tight_layout()
+    tempname = "temp_{0}.png".format(time.time())
+    plt.savefig(tempname, bbox_inches='tight', pad_inches = 0, transparent = True)
+    img = Image.open(tempname)
+    img = img.convert("RGB")
+    os.remove(tempname)
+    plt.close()
+    return img
 
 # Function to process each audio file
 def process_audio_files(row):
@@ -155,7 +184,6 @@ numrows = df.shape[0]
 for index, row in df.iterrows():
     process_audio_files(row)
     print(f"done {index} out of {numrows}")
-    # input()
 
 
 print("Dataset creation is complete.")

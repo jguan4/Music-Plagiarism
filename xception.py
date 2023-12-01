@@ -1,4 +1,4 @@
-""" 
+"""
 Creates an Xception Model as defined in:
 
 Francois Chollet
@@ -25,24 +25,17 @@ import torch
 
 __all__ = ['xception']
 
-model_urls = {
-#     'xception':'https://www.dropbox.com/s/1hplpzet9d7dv29/xception-c0a72b38.pth.tar?dl=1'
-    'xception':'http://data.lip6.fr/cadene/pretrainedmodels/xception-43020ad28.pth'
-}
-
-
 class SeparableConv2d(nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size=1,stride=1,padding=0,dilation=1,bias=False):
         super(SeparableConv2d,self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels,in_channels,kernel_size,stride,padding,dilation,groups=in_channels,bias=bias)
         self.pointwise = nn.Conv2d(in_channels,out_channels,1,1,0,1,1,bias=bias)
-    
+
     def forward(self,x):
         x = self.conv1(x)
         x = self.pointwise(x)
         return x
-
 
 class Block(nn.Module):
     def __init__(self,in_filters,out_filters,reps,strides=1,start_with_relu=True,grow_first=True):
@@ -53,7 +46,7 @@ class Block(nn.Module):
             self.skipbn = nn.BatchNorm2d(out_filters)
         else:
             self.skip=None
-        
+
         self.relu = nn.ReLU(inplace=True)
         rep=[]
 
@@ -68,7 +61,7 @@ class Block(nn.Module):
             rep.append(self.relu)
             rep.append(SeparableConv2d(filters,filters,3,stride=1,padding=1,bias=False))
             rep.append(nn.BatchNorm2d(filters))
-        
+
         if not grow_first:
             rep.append(self.relu)
             rep.append(SeparableConv2d(in_filters,out_filters,3,stride=1,padding=1,bias=False))
@@ -95,8 +88,6 @@ class Block(nn.Module):
         x+=skip
         return x
 
-
-
 class Xception(nn.Module):
     """
     Xception optimized for the ImageNet dataset, as specified in
@@ -109,7 +100,7 @@ class Xception(nn.Module):
         """
         super(Xception, self).__init__()
 
-        
+
         self.num_classes = num_classes
 
         self.conv1 = nn.Conv2d(3, 32, 3,2, 0, bias=False)
@@ -145,8 +136,6 @@ class Xception(nn.Module):
 
         self.fc = nn.Linear(2048, num_classes)
 
-
-
         #------- init weights --------
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -157,19 +146,15 @@ class Xception(nn.Module):
                 m.bias.data.zero_()
         #-----------------------------
 
-
-
-
-
     def forward_once(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        
+
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.relu(x)
-        
+
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
@@ -182,11 +167,11 @@ class Xception(nn.Module):
         x = self.block10(x)
         x = self.block11(x)
         x = self.block12(x)
-        
+
         x = self.conv3(x)
         x = self.bn3(x)
         x = self.relu(x)
-        
+
         x = self.conv4(x)
         x = self.bn4(x)
         x = self.relu(x)
@@ -206,25 +191,50 @@ class Xception(nn.Module):
 
         return output1, output2, output3
 
+# Define the triplet Loss Function
+class MeanDistance(torch.nn.Module):
+    def __init__(self):
+        super(MeanDistance, self).__init__()
 
+    # output 1 for anchor, output2 for positive, output3 for negative
+    def forward(self, output1, output2, output3):
+      # Calculate the euclidean distance and calculate the contrastive loss
+      euclidean_distance_p = F.pairwise_distance(output1, output2, keepdim = True)
+      euclidean_distance_n = F.pairwise_distance(output1, output3, keepdim = True)
+      mean_distance_p = torch.mean(euclidean_distance_p)
+      mean_distance_n = torch.mean(euclidean_distance_n)
+      return mean_distance_p, mean_distance_n
+
+# Define the triplet Loss Function
+class TripletLoss(torch.nn.Module):
+    def __init__(self, margin=2.0):
+        super(TripletLoss, self).__init__()
+        self.margin = margin
+
+    # output 1 for anchor, output2 for positive, output3 for negative
+    def forward(self, output1, output2, output3):
+      # Calculate the euclidean distance and calculate the contrastive loss
+      euclidean_distance_p = F.pairwise_distance(output1, output2, keepdim = True)
+      euclidean_distance_n = F.pairwise_distance(output1, output3, keepdim = True)
+
+      loss_triple = torch.mean((torch.clamp(self.margin - euclidean_distance_n + euclidean_distance_p, min=0.0)))
+
+      return loss_triple
 
 def xception(pretrained=True, to_cuda = False, reload_previous = False, **kwargs):
     """
     Construct Xception.
     """
-    if to_cuda:
-        model = Xception(**kwargs).cuda()
-    else:
-        model = Xception(**kwargs)
-    if pretrained:
-        model.load_state_dict(torch.load('xception-43020ad28.pth'))
-        # model.load_state_dict(model_zoo.load_url(model_urls['xception']))
-    if reload_previous:
-        load_model(model)
-    return model
 
-def save_model(model, path = './xception.pth'):
-    torch.save(model.state_dict(), path)
+    if to_cuda:
+        model = Xception().cuda()
+    else:
+        model = Xception()
+    if pretrained:
+        model.load_state_dict(torch.load('./xception-43020ad28.pth'))
+    if reload_previous:
+        load_model(model, path = kwargs['RELOAD_PATH'])
+    return model
 
 def load_model(model, path = './xception.pth'):
     model.load_state_dict(torch.load(path))
