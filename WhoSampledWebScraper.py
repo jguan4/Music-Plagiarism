@@ -15,6 +15,7 @@ import cloudscraper
 class song:
     pass
 
+#access intial webpage (list of most ampled tracks)
 scraper = cloudscraper.create_scraper()
 html=scraper.get("https://www.whosampled.com/most-sampled-tracks/")
 wsSoup=BeautifulSoup(html.text,'html.parser')
@@ -33,8 +34,7 @@ for x in range(2,5):   #loops to different pages of the list of "Most Sampled Tr
     songURLs.extend([x.a['href'] for x in wsSoup.find_all('span', {'class':"trackInfo"})])
     sleep(2)
     
-    
-    
+        
 origSongs=[]
 
 for url in songURLs:
@@ -49,7 +49,6 @@ for url in songURLs:
     sleep(2)
     
     #go to "see all" page of sampling songs and get name and artist of each song on first page of list (15 songs)
-                                    #sampledURLs=["https://www.whosampled.com"+x.a['href']+'sampled/' for x in wsSoup.find_all('span', {'class':"trackInfo"})]
    
     sampledHtml=scraper.get("https://www.whosampled.com"+url+'sampled/')
     sampledSoup=BeautifulSoup(sampledHtml.text,'html.parser')
@@ -57,13 +56,13 @@ for url in songURLs:
         sampledSong=song()
 
         sampledSong.name=track.a.text
-        sampledSong.artist=track.find("span", {"class":'trackArtist'}).text.split("(")[0].replace("by","")
-        sampledSong.name=sampledSong.name + " ["+sampledSong.artist+"]"
+        sampledSong.artist=track.find("span", {"class":'trackArtist'}).text.strip().split("(")[0].replace("by","")
+        sampledSong.name=sampledSong.name + " [" +sampledSong.artist+ "]"
         sampledSongURL=track.a['href']
         
         
-    #get sampled start times by going to page of sampling song
-                                    #sampledURLs.extend("https://www.whosampled.com"+sampledSoup.find("a", {"class":'trackName playIcon'})["href"])
+        #get sampled start times by going to page of sampling song
+                                  
         sampledSongHtml=scraper.get("https://www.whosampled.com"+sampledSongURL)
         sampledSongSoup=BeautifulSoup(sampledSongHtml.text,'html.parser')
         sampledSong.sampleStart=sampledSongSoup.find("strong",{'id':"sample-dest-timing"}).text.strip().replace(","," ").replace("and"," ").split()
@@ -71,17 +70,7 @@ for url in songURLs:
         
         origSong.sampledList.append(sampledSong)    #add info of sampling song to list attached to orginal song
         sleep(2)
-         
-#get name and artist of covering songs
-        # origSong.coverList
-        # coverSong=song()
-        # for track in sampledSoup.find_all("div", {"class":'trackDetails'}):
-        #     coverSong.name=track.a.text
-        #     coverSong.artist=track.find("span", {"class":'trackArtist'}).text.split("(")[0].replace("by","")
-        #     origSong.coverList.append(coverSong)    #add info of sampling song to list attached to orginal song
-    
-    
-    
+             
     origSongs.append(origSong)
     
     
@@ -100,6 +89,6 @@ for s in origSongs:
     sampledStartTimeCol.extend([x.sampleStart for x in s.sampledList])
     origSampleStartTimeCol.extend([x.origSampleStart for x in s.sampledList])
 
-#title, artist, songs that sampled, covers
+#title, artist, songs that sampled, covers are put into a pandas dataframe then saved to "WSdata.csv" file
 songDF=pd.DataFrame({'orig Songs Names':origSongsCol, "Sampling Song Names":sampledSongsNamesCol,  "Start of Sample":sampledStartTimeCol, "Start of sample in orig song":origSampleStartTimeCol})   #"orig artist names":origArtistCol, "sampled artist names":sampledSongsArtistCol, 
-songDF.to_csv("WSdata.csv")
+songDF.to_csv("WSdata.csv", header=False,index=False)
