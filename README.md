@@ -78,7 +78,7 @@ In conclusion, our model was able to distinguish similar songs from dissimilar s
 
 ## References
 <a id="1">[1]</a> 
-Ksif, G. and Thondilege, G. (2023). 
+Kasif, G. and Thondilege, G. (2023). 
 Exploring Music Similarity through Siamese CNNs using Triplet Loss on Music Samples. 
 2023 International Research Conference on Smart Computing and Systems Engineering (SCSE).
 
